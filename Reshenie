@@ -1,0 +1,51 @@
+using System;
+using NUnit.Framework;
+
+namespace Manipulation
+{
+    public static class ManipulatorTask
+    {
+        public static double[] MoveManipulatorTo(double x, double y, double angle)
+        {
+            var wristX = x - Manipulator.Palm * Math.Cos(angle);
+            var wristY = y + Manipulator.Palm * Math.Sin(angle);
+            var elbow = TriangleTask.GetABAngle(Manipulator.Forearm, Manipulator.UpperArm, 
+                        Math.Sqrt(wristX * wristX + wristY * wristY));
+            var shoulder = TriangleTask.GetABAngle(Manipulator.UpperArm, 
+                            Math.Sqrt(wristX * wristX + wristY * wristY), 
+                            Manipulator.Forearm) + Math.Atan2(wristY, wristX);
+            var wrist = -angle - shoulder - elbow;
+            return new[] { shoulder, elbow, wrist };
+        }
+    }
+
+    [TestFixture]
+    public class ManipulatorTask_Tests
+    {
+        [Test]
+        public void TestMoveManipulatorTo()
+        {
+            var rnd = new Random();
+            var x = rnd.NextDouble() * rnd.Next(10, 100);
+            var y = rnd.NextDouble() * rnd.Next(10, 100);
+            var wristX = 0.0;
+            var wristY = 0.0;
+            var angle = rnd.NextDouble() * rnd.Next(10, 100);
+            var result = ManipulatorTask.MoveManipulatorTo(x, y, angle);
+            while (Math.Sqrt(x * x + y * y) > Manipulator.Forearm + Manipulator.Palm + Manipulator.UpperArm
+                || Math.Sqrt(wristX * wristX + wristY * wristY) > Manipulator.Forearm + Manipulator.UpperArm
+                || result[0] == double.NaN && result[1] == double.NaN && result[2] == double.NaN)
+            {
+                x = rnd.NextDouble() * rnd.Next(10, 100);
+                y = rnd.NextDouble() * rnd.Next(10, 100);
+                angle = rnd.NextDouble() * rnd.Next(10, 100);
+                wristX = x - Manipulator.Palm * Math.Cos(angle);
+                wristY = y + Manipulator.Palm * Math.Sin(angle);
+                result = ManipulatorTask.MoveManipulatorTo(x, y, angle);
+            }
+            var review = AnglesToCoordinatesTask.GetJointPositions(result[0], result[1], result[2]);
+            Assert.AreEqual(review[2].X, x, 1e-4);
+            Assert.AreEqual(review[2].Y, y, 1e-4);
+        }
+    }
+}
